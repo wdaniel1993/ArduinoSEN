@@ -65,6 +65,7 @@ Quaternion q2;
 Quaternion q;
 float euler1[3]; 
 float euler2[3]; 
+VectorFloat* forward;
 
 int phase = 0;
 unsigned long timer = millis();
@@ -269,13 +270,18 @@ void setOffsets(MPU6050 accelgyro, int ax_offset, int ay_offset, int az_offset, 
 }
 
 double calculateAngle(Quaternion q1, Quaternion q2){
-  q1.normalize();
-  q2.normalize();
-  return acos(dotProductQuaternions(q1,q2)) / PI * 180;
+  
+  VectorFloat a = forward->getRotated(&q1).getNormalized();
+  VectorFloat b  = forward->getRotated(&q2).getNormalized();
+  return acos(dotProductVector(a,b)) / PI * 180;
 }
 
 double dotProductQuaternions(Quaternion left, Quaternion right) {
   return left.x * right.x + left.y * right.y + left.z * right.z + left.w * right.w;
+}
+
+double dotProductVector(VectorFloat left, VectorFloat right) {
+  return left.x * right.x + left.y * right.y + left.z * right.z;
 }
 
 
@@ -283,6 +289,7 @@ void setup() {
 
   accelGyro1.sensor = mpu1;
   accelGyro2.sensor = mpu2;
+  forward = new VectorFloat (0,0,1);
 
   // join I2C bus (I2Cdev library doesn't do this automatically)
   Wire.begin();
@@ -349,7 +356,7 @@ void loop() {
       }
 
       if(newAngle && (millis()-timer > 500)){
-        Serial.print("quat1\t");
+        /*Serial.print("quat1\t");
         Serial.print(q1.w);
         Serial.print("\t");
         Serial.print(q1.x);
@@ -364,7 +371,7 @@ void loop() {
         Serial.print("\t");
         Serial.print(q2.y);
         Serial.print("\t");
-        Serial.println(q2.z);
+        Serial.println(q2.z);*/
         Serial.print("Angle: ");
         Serial.println(calculateAngle(q1,q2));
         newAngle = false;
