@@ -355,23 +355,7 @@ void loop() {
         newAngle = true;
       }
 
-      if(newAngle && (millis()-timer > 500)){
-        /*Serial.print("quat1\t");
-        Serial.print(q1.w);
-        Serial.print("\t");
-        Serial.print(q1.x);
-        Serial.print("\t");
-        Serial.print(q1.y);
-        Serial.print("\t");
-        Serial.println(q1.z);
-        Serial.print("quat2\t");
-        Serial.print(q2.w);
-        Serial.print("\t");
-        Serial.print(q2.x);
-        Serial.print("\t");
-        Serial.print(q2.y);
-        Serial.print("\t");
-        Serial.println(q2.z);*/
+      if(newAngle && (millis()-timer > 200)){
         Serial.print("Angle: ");
         Serial.println(calculateAngle(q1,q2));
         newAngle = false;
