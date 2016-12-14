@@ -48,9 +48,9 @@
 
 ///////////////////////////////////   CONFIGURATION   /////////////////////////////
 //Change this 3 variables if you want to fine tune the skecth to your needs.
-int buffersize = 1000;   //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
-int acel_deadzone = 8;   //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
-int giro_deadzone = 2;   //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
+int buffersize = 500;   //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
+int acel_deadzone = 16;   //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
+int giro_deadzone = 4;   //Giro error allowed, make it lower to get more precision, but sketch may not converge  (default:1)
 
 // class default I2C address is 0x68
 // specific I2C addresses may be passed as a parameter here
@@ -99,7 +99,7 @@ void calibration(MPU6050 accelgyro) {
   int ax_offset, ay_offset, az_offset, gx_offset, gy_offset, gz_offset;
   accelgyro_values_t mean_val = meansensors(accelgyro);
 
-  int az_calibration_val = ((MIN_VAL * -1) / 2);
+  int az_calibration_val = (MIN_VAL / 2);
 
   ax_offset = -mean_val.ax / 8;
   ay_offset = -mean_val.ay / 8;
@@ -139,35 +139,35 @@ void calibration(MPU6050 accelgyro) {
     if (abs(mean_val.gz) <= giro_deadzone) ready++;
     else gz_offset = gz_offset - mean_val.gz / (giro_deadzone + 1);
 
+    Serial.print("\nSensor readings with offsets:\t");
+    Serial.print(mean_val.ax);
+    Serial.print("\t");
+    Serial.print(mean_val.ay);
+    Serial.print("\t");
+    Serial.print(mean_val.az);
+    Serial.print("\t");
+    Serial.print(mean_val.gx);
+    Serial.print("\t");
+    Serial.print(mean_val.gy);
+    Serial.print("\t");
+    Serial.println(mean_val.gz);
+    Serial.print("Your offsets:\t");
+    Serial.print(ax_offset);
+    Serial.print("\t");
+    Serial.print(ay_offset);
+    Serial.print("\t");
+    Serial.print(az_offset);
+    Serial.print("\t");
+    Serial.print(gx_offset);
+    Serial.print("\t");
+    Serial.print(gy_offset);
+    Serial.print("\t");
+    Serial.println(gz_offset);
+      
     if (ready == 6) {
       Serial.println("\nCalibrating successful!\t");
-      Serial.print("\nSensor readings with offsets:\t");
-      Serial.print(mean_val.ax);
-      Serial.print("\t");
-      Serial.print(mean_val.ay);
-      Serial.print("\t");
-      Serial.print(mean_val.az);
-      Serial.print("\t");
-      Serial.print(mean_val.gx);
-      Serial.print("\t");
-      Serial.print(mean_val.gy);
-      Serial.print("\t");
-      Serial.println(mean_val.gz);
-      Serial.print("Your offsets:\t");
-      Serial.print(ax_offset);
-      Serial.print("\t");
-      Serial.print(ay_offset);
-      Serial.print("\t");
-      Serial.print(az_offset);
-      Serial.print("\t");
-      Serial.print(gx_offset);
-      Serial.print("\t");
-      Serial.print(gy_offset);
-      Serial.print("\t");
-      Serial.println(gz_offset);
       break;
     }
-
   }
 }
 
@@ -322,8 +322,8 @@ void loop() {
     calibration(accelGyro1.sensor);
     calibration(accelGyro2.sensor);
     #else
-    setOffsets(accelGyro1.sensor, 1422,1897,870,80,50,59);
-    setOffsets(accelGyro2.sensor, 927,-1049,586,234,-11,-23);
+    setOffsets(accelGyro1.sensor, 550,-1074,557,238,-17,-5);
+    setOffsets(accelGyro2.sensor, 1448,1852,915,68,64,164);
     #endif
     phase++;
     delay(1000);
