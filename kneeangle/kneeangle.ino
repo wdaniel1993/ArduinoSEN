@@ -1,35 +1,5 @@
-// I2C device class (I2Cdev) demonstration Arduino sketch for MPU6050 class
-// 10/7/2011 by Jeff Rowberg <jeff@rowberg.net>
-// Updates should (hopefully) always be available at https://github.com/jrowberg/i2cdevlib
-//
-// Changelog:
-//     2011-10-07 - initial release
-
-/* ============================================
-  I2Cdev device library code is placed under the MIT license
-  Copyright (c) 2011 Jeff Rowberg
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy
-  of this software and associated documentation files (the "Software"), to
-  deal
-  in the Software without restriction, including without limitation the rights
-  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-  copies of the Software, and to permit persons to whom the Software is
-  furnished to do so, subject to the following conditions:
-
-  The above copyright notice and this permission notice shall be included in
-  all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-  FROM,
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-  THE SOFTWARE.
-  ===============================================
-*/
+//Authors: Conny Walchshofer, Daniel Wallner
+//Based on: https://github.com/jrowberg/i2cdevlib/blob/master/Arduino/MPU6050/examples/MPU6050_DMP6/MPU6050_DMP6.ino
 
 // Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
 // is used in I2Cdev.h
@@ -39,14 +9,15 @@
 // for both classes must be in the include path of your project
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
-//#include "MPU6050.h"
 
 #define dt 0.01
 #define MAX_VAL 32767
 #define MIN_VAL -32768
+
+//Uncomment to execute calibration
 //#define ENABLE_CALIBRATION
 
-///////////////////////////////////   CONFIGURATION   /////////////////////////////
+//Calbiration CONFIGURATION 
 //Change this 3 variables if you want to fine tune the skecth to your needs.
 int buffersize = 500;   //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
 int acel_deadzone = 16;   //Acelerometer error allowed, make it lower to get more precision, but sketch may not converge  (default:8)
@@ -60,18 +31,18 @@ int giro_deadzone = 4;   //Giro error allowed, make it lower to get more precisi
 MPU6050 mpu1(0x68);
 MPU6050 mpu2(0x69);
 
-Quaternion q1;
-Quaternion q2;
+Quaternion q1; //current Quaternion of mpu1
+Quaternion q2; //current Quaternion of mpu2
 Quaternion q;
-float euler1[3]; 
-float euler2[3]; 
-VectorFloat* forward;
+
+VectorFloat* forward; //forward vector = 0/0/1
 
 int phase = 0;
 unsigned long timer = millis();
 
 bool blinkState = false;
 
+//struct for saving sensor data
 struct accelgyro_values_t
 {
   int ax;
@@ -92,13 +63,15 @@ struct accelgyro_t {
   int interruptNumber;
   void (*interruptFunction)();
 } accelGyro1, accelGyro2;
-///////////////////////////////////   FUNCTIONS   ////////////////////////////////////
+
 
 #ifdef ENABLE_CALIBRATION
+
+//execute calibration for a mpu6050
 void calibration(MPU6050 accelgyro) {
   int ax_offset, ay_offset, az_offset, gx_offset, gy_offset, gz_offset;
   accelgyro_values_t mean_val = meansensors(accelgyro);
-
+  
   int az_calibration_val = (MIN_VAL / 2);
 
   ax_offset = -mean_val.ax / 8;
@@ -108,8 +81,10 @@ void calibration(MPU6050 accelgyro) {
   gx_offset = -mean_val.gx / 4;
   gy_offset = -mean_val.gy / 4;
   gz_offset = -mean_val.gz / 4;
+  
   while (1) {
     int ready = 0;
+    //set offsets
     accelgyro.setXAccelOffset(ax_offset);
     accelgyro.setYAccelOffset(ay_offset);
     accelgyro.setZAccelOffset(az_offset);
@@ -119,6 +94,8 @@ void calibration(MPU6050 accelgyro) {
     accelgyro.setZGyroOffset(gz_offset);
 
     mean_val = meansensors(accelgyro);
+
+    //check if calibration is completed
     Serial.println("...");
 
     if (abs(mean_val.ax) <= acel_deadzone) ready++;
@@ -139,6 +116,7 @@ void calibration(MPU6050 accelgyro) {
     if (abs(mean_val.gz) <= giro_deadzone) ready++;
     else gz_offset = gz_offset - mean_val.gz / (giro_deadzone + 1);
 
+    //print mean data with offsets
     Serial.print("\nSensor readings with offsets:\t");
     Serial.print(mean_val.ax);
     Serial.print("\t");
@@ -171,6 +149,7 @@ void calibration(MPU6050 accelgyro) {
   }
 }
 
+//calculate mean values of the sensor values
 accelgyro_values_t meansensors(MPU6050 accelgyro) {
   long i = 0, buff_ax = 0, buff_ay = 0, buff_az = 0, buff_gx = 0, buff_gy = 0, buff_gz = 0;
   int ax, ay, az, gx, gy, gz;
@@ -203,6 +182,7 @@ accelgyro_values_t meansensors(MPU6050 accelgyro) {
 }
 #endif
 
+//turn on dmp on mpu6050
 int initializeDmp(accelgyro_t* accelgyro) {
   int devStatus = accelgyro->sensor.dmpInitialize();
 
@@ -235,6 +215,8 @@ int initializeDmp(accelgyro_t* accelgyro) {
     return false;
   }
 }
+
+//look if there is quaternion data in the dmp fifo buffer
 int tryReadLastQuaternion(accelgyro_t* accelGyro){
   
   accelGyro->mpuIntStatus = accelGyro->sensor.getIntStatus();
@@ -259,6 +241,7 @@ int tryReadLastQuaternion(accelgyro_t* accelGyro){
   return false;
 }
 
+//shortcut to set offsets
 void setOffsets(MPU6050 accelgyro, int ax_offset, int ay_offset, int az_offset, int gx_offset, int gy_offset, int gz_offset){
     accelgyro.setXAccelOffset(ax_offset);
     accelgyro.setYAccelOffset(ay_offset);
@@ -269,29 +252,29 @@ void setOffsets(MPU6050 accelgyro, int ax_offset, int ay_offset, int az_offset, 
     accelgyro.setZGyroOffset(gz_offset);
 }
 
+//calculate the angle between two quaternions
 double calculateAngle(Quaternion q1, Quaternion q2){
-  
   VectorFloat a = forward->getRotated(&q1).getNormalized();
   VectorFloat b  = forward->getRotated(&q2).getNormalized();
   return acos(dotProductVector(a,b)) / PI * 180;
 }
 
+//calculate the dot product for two quaternions
 double dotProductQuaternions(Quaternion left, Quaternion right) {
   return left.x * right.x + left.y * right.y + left.z * right.z + left.w * right.w;
 }
 
+//calculate the dot product for two vectors
 double dotProductVector(VectorFloat left, VectorFloat right) {
   return left.x * right.x + left.y * right.y + left.z * right.z;
 }
 
 
 void setup() {
-
   accelGyro1.sensor = mpu1;
   accelGyro2.sensor = mpu2;
   forward = new VectorFloat (0,0,1);
-
-  // join I2C bus (I2Cdev library doesn't do this automatically)
+  
   Wire.begin();
 
   // initialize serial communication
@@ -329,6 +312,7 @@ void loop() {
     delay(1000);
   }
 
+  //init dmp
   if (phase == 1) {
     Serial.println("\nCalibration done.");
     Serial.println(F("Initializing DMP MPU6050 #1..."));
@@ -341,8 +325,8 @@ void loop() {
     accelGyro2.sensor.resetFIFO();
   }
 
+  //read data, calculate angle and print it
   if (phase == 2) {
-    
     if (!(accelGyro1.dmpReady && accelGyro2.dmpReady )) return;
       res = tryReadLastQuaternion(&accelGyro1);
       if(res) {
